@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sister's 30th Birthday</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+
+        .note-card {
+            transition: all 0.2s ease-in-out;
+        }
+
+        .note-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-12">
+
+    <!-- Navigation -->
+    <nav class="bg-white border-b border-slate-200 sticky top-0 z-10">
+        <div class="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <div class="bg-indigo-600 p-2 rounded-lg">
+                    <i class="fas fa-sticky-note text-white text-xl"></i>
+                </div>
+                <h1 class="text-xl font-bold text-slate-800 tracking-tight">QuickNotes</h1>
+            </div>
+            <div class="relative w-1/2 max-w-md">
+                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                    <i class="fas fa-search"></i>
+                </span>
+                <input type="text" id="searchInput" placeholder="Search notes..." 
+                    class="block w-full pl-10 pr-3 py-2 border border-slate-200 rounded-full bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all sm:text-sm">
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-5xl mx-auto px-4 mt-8">
+        
+        <!-- Note Input Area -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 mb-10 max-w-2xl mx-auto">
+            <input type="text" id="noteTitle" placeholder="Title" 
+                class="w-full px-4 py-2 text-lg font-semibold text-slate-800 placeholder-slate-400 focus:outline-none mb-2">
+            <textarea id="noteContent" placeholder="Take a note..." rows="1" 
+                class="w-full px-4 py-2 text-slate-600 placeholder-slate-400 focus:outline-none resize-none overflow-hidden"></textarea>
+            
+            <div class="flex items-center justify-between mt-4 px-2">
+                <div class="flex gap-2">
+                    <button onclick="setColor('bg-white')" class="w-6 h-6 rounded-full border border-slate-200 bg-white hover:ring-2 ring-slate-300"></button>
+                    <button onclick="setColor('bg-red-50')" class="w-6 h-6 rounded-full border border-red-200 bg-red-50 hover:ring-2 ring-red-300"></button>
+                    <button onclick="setColor('bg-amber-50')" class="w-6 h-6 rounded-full border border-amber-200 bg-amber-50 hover:ring-2 ring-amber-300"></button>
+                    <button onclick="setColor('bg-emerald-50')" class="w-6 h-6 rounded-full border border-emerald-200 bg-emerald-50 hover:ring-2 ring-emerald-300"></button>
+                    <button onclick="setColor('bg-blue-50')" class="w-6 h-6 rounded-full border border-blue-200 bg-blue-50 hover:ring-2 ring-blue-300"></button>
+                </div>
+                <button id="saveBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-6 rounded-xl transition-colors shadow-sm shadow-indigo-200">
+                    Save Note
+                </button>
+            </div>
+        </div>
+
+        <!-- Notes Grid -->
+        <div id="notesContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Notes injected by JS -->
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="hidden flex flex-col items-center justify-center py-20 text-slate-400">
+            <i class="fas fa-folder-open text-6xl mb-4 opacity-20"></i>
+            <p class="text-lg">No notes yet (lame). Jot down your lightning-striking blockbuster series/feature above!</p>
+        </div>
+    </main>
+
+    <script>
+        // State Management
+        let notes = JSON.parse(localStorage.getItem('notes')) || [];
+        let selectedColor = 'bg-white';
+
+        const notesContainer = document.getElementById('notesContainer');
+        const emptyState = document.getElementById('emptyState');
+        const noteTitle = document.getElementById('noteTitle');
+        const noteContent = document.getElementById('noteContent');
+        const saveBtn = document.getElementById('saveBtn');
+        const searchInput = document.getElementById('searchInput');
+
+        // Auto-expand textarea
+        noteContent.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+        });
+
+        function setColor(colorClass) {
+            selectedColor = colorClass;
+            // Visual feedback could be added here
+        }
+
+        function saveNote() {
+            const title = noteTitle.value.trim();
+            const content = noteContent.value.trim();
+
+            if (!title && !content) return;
+
+            const newNote = {
+                id: Date.now(),
+                title: title,
+                content: content,
+                color: selectedColor,
+                date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+            };
+
+            notes.unshift(newNote);
+            updateStorage();
+            renderNotes();
+            
+            // Clear inputs
+            noteTitle.value = '';
+            noteContent.value = '';
+            noteContent.style.height = 'auto';
+            selectedColor = 'bg-white';
+        }
+
+        function deleteNote(id) {
+            notes = notes.filter(note => note.id !== id);
+            updateStorage();
+            renderNotes();
+        }
+
+        function updateStorage() {
+            localStorage.setItem('notes', JSON.stringify(notes));
+        }
+
+        function renderNotes(filter = '') {
+            const filteredNotes = notes.filter(note => 
+                note.title.toLowerCase().includes(filter.toLowerCase()) || 
+                note.content.toLowerCase().includes(filter.toLowerCase())
+            );
+
+            if (filteredNotes.length === 0) {
+                notesContainer.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+            notesContainer.innerHTML = filteredNotes.map(note => `
+                <div class="${note.color} note-card p-6 rounded-2xl border border-slate-200 flex flex-col h-full relative group">
+                    <button onclick="deleteNote(${note.id})" 
+                        class="absolute top-4 right-4 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                    <h3 class="font-bold text-slate-800 text-lg mb-2 pr-6">${note.title || 'Untitled'}</h3>
+                    <p class="text-slate-600 whitespace-pre-wrap flex-grow mb-4">${note.content}</p>
+                    <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        ${note.date}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Listeners
+        saveBtn.addEventListener('click', saveNote);
+        searchInput.addEventListener('input', (e) => renderNotes(e.target.value));
+
+        // Initial Render
+        window.onload = () => renderNotes();
+
+    </script>
+</body>
+</html>
